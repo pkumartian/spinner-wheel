@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Custom Spinner Wheel</title>
   <style>
     @keyframes rainbow {
@@ -99,7 +99,7 @@
 <div id="panelEditor"></div>
 <div style="margin-top: 1rem;">
   <button onclick="shareWinner()">Share Result</button>
-</div></div>
+</div>
 
 <script>
   const canvas = document.getElementById('wheel');
@@ -233,24 +233,32 @@
     }
   }
 
-  updateEditor();
-  drawWheel();
-
   function shareWinner() {
     const winner = document.getElementById('winnerDisplay').innerText;
     if (winner) {
       const title = document.getElementById('wheelTitle').innerText.trim();
       const message = `${title}: The winner is ${winner}!`;
-      navigator.clipboard.writeText(message).then(() => {
-        alert("Result copied to clipboard:");
-      }).catch(() => {
-        alert("Could not copy result. Please copy manually:");
-        prompt("Copy this:", message);
-      });
+
+      if (navigator.share) {
+        navigator.share({
+          title: 'Spinner Result',
+          text: message
+        }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(message).then(() => {
+          alert("Result copied to clipboard:\n" + message);
+        }).catch(() => {
+          alert("Could not copy result. Please copy manually:");
+          prompt("Copy this:", message);
+        });
+      }
     } else {
       alert("No result to share yet. Spin the wheel first.");
     }
   }
+
+  updateEditor();
+  drawWheel();
 </script>
 
 </body>
