@@ -3,250 +3,262 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ultimate Spinner Wheel</title>
+  <title>Custom Spinner Wheel</title>
   <style>
+    @keyframes rainbow {
+      0% { color: red; }
+      14% { color: orange; }
+      28% { color: yellow; }
+      42% { color: green; }
+      57% { color: blue; }
+      71% { color: indigo; }
+      85% { color: violet; }
+      100% { color: red; }
+    }
+
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
       background: #121212;
-      color: #fff;
-    }
-
-    canvas {
-      margin-top: 20px;
-      border: 4px solid #fff;
-      border-radius: 50%;
-      background-color: #222;
-    }
-
-    .controls {
-      margin: 20px;
+      color: #ffffff;
+      margin: 0;
       text-align: center;
+      padding: 1rem;
     }
-
-    input, button {
-      margin: 5px;
-      padding: 10px 15px;
-      border-radius: 8px;
-      font-size: 1em;
-      border: none;
+    canvas {
+      margin: 20px auto;
+      display: block;
+      background: #1e1e1e;
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    }
+    #panelEditor {
+      margin-top: 1rem;
+    }
+    input[type="color"], input[type="text"] {
+      margin: 0.25rem;
       background: #1e1e1e;
       color: #fff;
-      transition: background 0.2s;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 0.3rem;
     }
-
-    input:focus, button:hover {
-      outline: none;
+    button {
+      margin: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
       background: #333;
-    }
-
-    .segment {
-      background: #2a2a2a;
-      margin: 4px auto;
-      padding: 8px;
-      border-radius: 5px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 90%;
-    }
-
-    .segment input[type="color"] {
-      margin-left: 10px;
-    }
-
-    #editableTitle {
-      background: none;
-      border: none;
-      font-size: 2em;
-      font-weight: bold;
       color: #fff;
-      text-align: center;
-      margin-top: 20px;
+      border: 1px solid #555;
+      border-radius: 6px;
     }
-
-    @media (max-width: 600px) {
-      canvas {
-        width: 90vw !important;
-        height: 90vw !important;
-      }
+    button:hover {
+      background: #555;
+    }
+    h1[contenteditable="true"] {
+      outline: none;
+      font-size: 1.5rem;
+      animation: rainbow 4s linear infinite;
+    }
+    .panel-row {
+      margin-bottom: 0.5rem;
+    }
+    #winnerDisplay {
+      font-size: 1.25rem;
+      margin-top: 1rem;
+      font-weight: bold;
+      animation: rainbow 3s linear infinite;
     }
   </style>
 </head>
 <body>
-  <input id="editableTitle" value="Ultimate Spinner Wheel" />
-  <canvas id="wheel" width="400" height="400"></canvas>
 
-  <div class="controls">
-    <input id="newPanel" placeholder="Add category..." />
-    <input type="color" id="colorPicker" value="#29abe2">
-    <button onclick="addPanel()">Add</button>
-    <button onclick="spinWheel()">Spin</button>
-    <button onclick="downloadSettings()">Download</button>
-    <input type="file" onchange="uploadSettings(this)" />
-    <div id="categories"></div>
-  </div>
+<h1 id="wheelTitle" contenteditable="true">Spin the Wheel!</h1>
+<canvas id="wheel" width="400" height="400"></canvas>
 
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <script>
-    const canvas = document.getElementById('wheel');
-    const ctx = canvas.getContext('2d');
-    const radius = canvas.width / 2;
-    let rotation = 0, spinning = false;
+<div>
+  <button onclick="spinWheel()">SPIN</button>
+  <button onclick="saveConfig()">Save</button>
+  <button onclick="loadConfig()">Load</button>
+  <button onclick="downloadConfig()">Download</button>
+</div>
 
-    let panels = JSON.parse(localStorage.getItem("wheel_panels")) || [
-      { label: "Example A", color: "#29abe2" },
-      { label: "Example B", color: "#ffc107" }
-    ];
+<div id="panelEditor"></div>
+<button onclick="addPanel()">Add Panel</button>
 
-    const drumroll = new Audio("https://cdn.pixabay.com/audio/2022/03/15/audio_c7dc3f8c36.mp3");
+<div id="winnerDisplay"></div>
 
-    function savePanels() {
-      localStorage.setItem("wheel_panels", JSON.stringify(panels));
-    }
+<script>
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+  const radius = canvas.width / 2;
+  let rotation = 0;
+  let spinning = false;
+  let winnerIndex = -1;
+  let glowFrameCount = 0;
 
-    function drawWheel() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const angle = 2 * Math.PI / panels.length;
+  let panels = [
+    { label: "1", color: "#f44336" },
+    { label: "2", color: "#4caf50" },
+    { label: "3", color: "#2196f3" },
+    { label: "4", color: "#ff9800" },
+    { label: "5", color: "#9c27b0" },
+    { label: "6", color: "#3f51b5" },
+  ];
 
-      panels.forEach((panel, i) => {
-        const start = angle * i + rotation;
-        const end = start + angle;
+  function drawWheel() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const angle = 2 * Math.PI / panels.length;
 
-        ctx.beginPath();
-        ctx.moveTo(radius, radius);
-        ctx.arc(radius, radius, radius, start, end);
-        ctx.fillStyle = panel.color;
-        ctx.fill();
-        ctx.strokeStyle = "#fff";
-        ctx.stroke();
+    panels.forEach((panel, i) => {
+      const start = angle * i + rotation;
+      const end = start + angle;
 
-        ctx.save();
-        ctx.translate(radius, radius);
-        ctx.rotate(start + angle / 2);
-        ctx.textAlign = "right";
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 14px Arial";
-        ctx.fillText(panel.label, radius - 10, 5);
-        ctx.restore();
-      });
-
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(radius, 0);
-      ctx.lineTo(radius - 10, -10);
-      ctx.lineTo(radius + 10, -10);
+      ctx.moveTo(radius, radius);
+      ctx.arc(radius, radius, radius, start, end);
       ctx.closePath();
-      ctx.fillStyle = "red";
+
+      // Glow effect on winner
+      if (i === winnerIndex && !spinning) {
+        const intensity = 0.6 + 0.4 * Math.sin(glowFrameCount * 0.2);
+        ctx.shadowBlur = 60;
+        ctx.shadowColor = `rgba(255, 255, 255, ${intensity})`;
+      }
+
+      ctx.fillStyle = panel.color;
       ctx.fill();
-    }
+      ctx.shadowBlur = 0;
+      ctx.restore();
 
-    function updateList() {
-      const container = document.getElementById('categories');
-      container.innerHTML = '';
-      panels.forEach((panel, i) => {
-        const div = document.createElement('div');
-        div.className = 'segment';
-        div.innerHTML = `
-          ${panel.label}
-          <input type="color" value="${panel.color}" onchange="updateColor(${i}, this.value)">
-          <button onclick="removePanel(${i})">X</button>`;
-        container.appendChild(div);
-      });
-      savePanels();
-    }
+      ctx.save();
+      ctx.translate(radius, radius);
+      ctx.rotate(start + angle / 2);
+      ctx.textAlign = "right";
+      ctx.font = "bold 18px sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(panel.label, radius - 10, 10);
+      ctx.restore();
+    });
 
-    function updateColor(index, color) {
-      panels[index].color = color;
-      drawWheel();
-      savePanels();
-    }
+    drawPointer();
+  }
 
-    function addPanel() {
-      const input = document.getElementById('newPanel');
-      const color = document.getElementById('colorPicker').value;
-      const value = input.value.trim();
-      if (value) {
-        panels.push({ label: value, color: color });
-        input.value = '';
-        updateList();
+  function drawPointer() {
+    ctx.save();
+    ctx.translate(radius, radius);
+    ctx.beginPath();
+    ctx.moveTo(0, -radius - 5);
+    ctx.lineTo(-15, -radius - 25);
+    ctx.lineTo(15, -radius - 25);
+    ctx.closePath();
+    ctx.fillStyle = '#00e5ff';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function spinWheel() {
+    if (spinning) return;
+    spinning = true;
+    document.getElementById('winnerDisplay').innerText = '';
+    let speed = Math.random() * 0.3 + 0.3;
+    let decay = 0.985;
+    winnerIndex = -1;
+
+    function animate() {
+      if (speed > 0.002) {
+        rotation += speed;
+        speed *= decay;
         drawWheel();
+        requestAnimationFrame(animate);
+      } else {
+        spinning = false;
+        const angle = (2 * Math.PI - (rotation % (2 * Math.PI))) % (2 * Math.PI);
+        winnerIndex = Math.floor(angle / (2 * Math.PI / panels.length));
+        const winner = panels[winnerIndex].label;
+        document.getElementById('winnerDisplay').innerText = "Winner: " + winner;
+        glowFrameCount = 0;
+        animateGlow();
       }
     }
 
-    function removePanel(index) {
-      panels.splice(index, 1);
-      updateList();
-      drawWheel();
-    }
+    animate();
+  }
 
-    function spinWheel() {
-      if (spinning || panels.length < 2) return;
-      spinning = true;
-      drumroll.play();
-
-      const spinAmount = Math.random() * Math.PI * 8 + Math.PI * 8;
-      const duration = 4000;
-      const start = performance.now();
-
-      function animate(now) {
-        let t = now - start;
-        let progress = Math.min(t / duration, 1);
-        let easeOut = 1 - Math.pow(1 - progress, 4);
-        rotation = spinAmount * easeOut;
-        drawWheel();
-
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          spinning = false;
-          const angle = (2 * Math.PI) / panels.length;
-          const index = Math.floor((panels.length - ((rotation % (2 * Math.PI)) / angle)) % panels.length);
-          const selected = panels[index].label;
-          confetti({ particleCount: 150, spread: 100, origin: { y: 0.4 } });
-          setTimeout(() => alert("Selected: " + selected), 300);
-        }
-      }
-
-      requestAnimationFrame(animate);
-    }
-
-    function downloadSettings() {
-      const data = JSON.stringify(panels);
-      const blob = new Blob([data], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = "spinner-settings.json";
-      a.click();
-    }
-
-    function uploadSettings(input) {
-      const file = input.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const json = JSON.parse(e.target.result);
-          if (Array.isArray(json) && json.every(p => p.label && p.color)) {
-            panels = json;
-            updateList();
-            drawWheel();
-          } else {
-            alert("Invalid format");
-          }
-        } catch {
-          alert("Error reading file");
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    updateList();
+  function animateGlow() {
+    if (spinning || winnerIndex === -1) return;
+    glowFrameCount++;
     drawWheel();
-  </script>
+    requestAnimationFrame(animateGlow);
+  }
+
+  function saveConfig() {
+    const config = {
+      title: document.getElementById('wheelTitle').innerText,
+      panels: panels
+    };
+    localStorage.setItem('wheelConfig', JSON.stringify(config));
+    alert('Saved to browser storage.');
+  }
+
+  function loadConfig() {
+    const config = JSON.parse(localStorage.getItem('wheelConfig'));
+    if (config) {
+      document.getElementById('wheelTitle').innerText = config.title;
+      panels = config.panels;
+      updateEditor();
+      drawWheel();
+    } else {
+      alert('No saved configuration found.');
+    }
+  }
+
+  function downloadConfig() {
+    const config = {
+      title: document.getElementById('wheelTitle').innerText,
+      panels: panels
+    };
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "spinner-config.json";
+    a.click();
+  }
+
+  function updateEditor() {
+    const editor = document.getElementById('panelEditor');
+    editor.innerHTML = '';
+    panels.forEach((panel, i) => {
+      const div = document.createElement('div');
+      div.className = 'panel-row';
+      div.innerHTML = `
+        <input type="text" value="${panel.label}" onchange="panels[${i}].label=this.value; drawWheel();">
+        <input type="color" value="${panel.color}" onchange="panels[${i}].color=this.value; drawWheel();">
+        <button onclick="removePanel(${i})">Remove</button>
+      `;
+      editor.appendChild(div);
+    });
+  }
+
+  function addPanel() {
+    panels.push({ label: "New", color: "#666666" });
+    updateEditor();
+    drawWheel();
+  }
+
+  function removePanel(index) {
+    if (panels.length > 2) {
+      panels.splice(index, 1);
+      updateEditor();
+      drawWheel();
+    } else {
+      alert("At least 2 panels are required.");
+    }
+  }
+
+  updateEditor();
+  drawWheel();
+</script>
+
 </body>
 </html>
