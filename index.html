@@ -63,29 +63,41 @@
       margin-bottom: 0.5rem;
     }
     #winnerDisplay {
-      font-size: 1.25rem;
-      margin-top: 1rem;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.5rem;
       font-weight: bold;
       animation: rainbow 3s linear infinite;
+      pointer-events: none;
+    }
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    #canvasWrapper {
+      position: relative;
+      display: inline-block;
     }
   </style>
 </head>
 <body>
 
-<h1 id="wheelTitle" contenteditable="true">Spin the Wheel!</h1>
-<canvas id="wheel" width="400" height="400"></canvas>
+<h1 id="wheelTitle" contenteditable="true" title="Click to edit the wheel title">Click to edit title</h1>
+<div id="canvasWrapper">
+  <canvas id="wheel" width="400" height="400"></canvas>
+  <div id="winnerDisplay"></div>
+</div>
 
-<div>
+<div class="button-group">
   <button onclick="spinWheel()">SPIN</button>
-  <button onclick="saveConfig()">Save</button>
-  <button onclick="loadConfig()">Load</button>
-  <button onclick="downloadConfig()">Download</button>
+  <button onclick="addPanel()">Add Panel</button>
 </div>
 
 <div id="panelEditor"></div>
-<button onclick="addPanel()">Add Panel</button>
-
-<div id="winnerDisplay"></div>
 
 <script>
   const canvas = document.getElementById('wheel');
@@ -119,7 +131,6 @@
       ctx.arc(radius, radius, radius, start, end);
       ctx.closePath();
 
-      // Glow effect on winner
       if (i === winnerIndex && !spinning) {
         const intensity = 0.6 + 0.4 * Math.sin(glowFrameCount * 0.2);
         ctx.shadowBlur = 60;
@@ -176,7 +187,7 @@
         const angle = (2 * Math.PI - (rotation % (2 * Math.PI))) % (2 * Math.PI);
         winnerIndex = Math.floor(angle / (2 * Math.PI / panels.length));
         const winner = panels[winnerIndex].label;
-        document.getElementById('winnerDisplay').innerText = "Winner: " + winner;
+        document.getElementById('winnerDisplay').innerText = winner;
         glowFrameCount = 0;
         animateGlow();
       }
@@ -192,37 +203,10 @@
     requestAnimationFrame(animateGlow);
   }
 
-  function saveConfig() {
-    const config = {
-      title: document.getElementById('wheelTitle').innerText,
-      panels: panels
-    };
-    localStorage.setItem('wheelConfig', JSON.stringify(config));
-    alert('Saved to browser storage.');
-  }
-
-  function loadConfig() {
-    const config = JSON.parse(localStorage.getItem('wheelConfig'));
-    if (config) {
-      document.getElementById('wheelTitle').innerText = config.title;
-      panels = config.panels;
-      updateEditor();
-      drawWheel();
-    } else {
-      alert('No saved configuration found.');
-    }
-  }
-
-  function downloadConfig() {
-    const config = {
-      title: document.getElementById('wheelTitle').innerText,
-      panels: panels
-    };
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "spinner-config.json";
-    a.click();
+  function addPanel() {
+    panels.push({ label: "New", color: "#666666" });
+    updateEditor();
+    drawWheel();
   }
 
   function updateEditor() {
@@ -238,12 +222,6 @@
       `;
       editor.appendChild(div);
     });
-  }
-
-  function addPanel() {
-    panels.push({ label: "New", color: "#666666" });
-    updateEditor();
-    drawWheel();
   }
 
   function removePanel(index) {
