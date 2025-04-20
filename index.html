@@ -96,8 +96,10 @@
   <button onclick="spinWheel()">SPIN</button>
   <button onclick="addPanel()">Add Panel</button>
 </div>
-
 <div id="panelEditor"></div>
+<div style="margin-top: 1rem;">
+  <button onclick="shareWinner()">Share Result</button>
+</div></div>
 
 <script>
   const canvas = document.getElementById('wheel');
@@ -109,12 +111,9 @@
   let glowFrameCount = 0;
 
   let panels = [
-    { label: "1", color: "#f44336" },
-    { label: "2", color: "#4caf50" },
-    { label: "3", color: "#2196f3" },
-    { label: "4", color: "#ff9800" },
-    { label: "5", color: "#9c27b0" },
-    { label: "6", color: "#3f51b5" },
+    { label: "Option A", color: "#f44336" },
+    { label: "Option B", color: "#4caf50" },
+    { label: "Option C", color: "#2196f3" },
   ];
 
   function drawWheel() {
@@ -236,6 +235,22 @@
 
   updateEditor();
   drawWheel();
+
+  function shareWinner() {
+    const winner = document.getElementById('winnerDisplay').innerText;
+    if (winner) {
+      const title = document.getElementById('wheelTitle').innerText.trim();
+      const message = `${title}: The winner is ${winner}!`;
+      navigator.clipboard.writeText(message).then(() => {
+        alert("Result copied to clipboard:");
+      }).catch(() => {
+        alert("Could not copy result. Please copy manually:");
+        prompt("Copy this:", message);
+      });
+    } else {
+      alert("No result to share yet. Spin the wheel first.");
+    }
+  }
 </script>
 
 </body>
